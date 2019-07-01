@@ -1,0 +1,137 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="http://yuskegoto.net/images/myicon.ico" />
+<title>Web BLE Test</title>
+</head>
+<body id="background" style="background-color: rgb(230, 230, 230)">
+    <div id="info" style="color:rgb(10, 10 ,10); text-align: center; position: absolute; top:50%; left:50%; transform: translate(-50%, -50%)">
+        <h2>
+          Web BLE Demo<br><br>
+        <span id = "BLEvalue"></span><br>
+        <button id = "connectBLE" type="button">Connect BLE</button><br>
+        <button id = "disconnect" type="button">Disconnect</button>
+        </h2>
+    </div>
+</body>
+<!-- <script>
+    if('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js');
+    }
+</script> -->
+<script>
+
+document.querySelector('#connectBLE').addEventListener('click', function() {
+    if (isWebBluetoothEnabled()) {
+      onStartButtonClick();
+    }
+  });
+
+  document.querySelector('#disconnect').addEventListener('click', function(event) {
+    if (isWebBluetoothEnabled()) {
+      onStopButtonClick();
+    }
+  });
+ 
+  var myCharacteristic;
+
+function onStartButtonClick() {
+
+  // let serviceUuid = '0xC0252F8FABADE4B2292141443D299243';
+  // let serviceUuid = '0xC0252F8F';
+  // let serviceUuid = 'c0252f8f-abad-e4b2-2921-41443d299243';
+  // let serviceUuid = 'battery_service';//document.querySelector('#service').value;
+  // let serviceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
+  // let serviceUuid = '0x0000180f';
+  let serviceUuid = '0x00002220';
+  if (serviceUuid.startsWith('0x')) {
+    serviceUuid = parseInt(serviceUuid);
+  }
+
+  let filters = [];
+  filters.push({name: 'LION_WAIST'});
+  filters.push({services: [serviceUuid]});
+  // filters.push({name: 'Palm'});
+  // filters.push({services: ["battery_service"]});
+  let options = [];
+  options.filters = filters;
+  let optionalServices = [];
+  // optionalServices.push('battery_service');
+  optionalServices.push(serviceUuid);
+  options.optionalServices = optionalServices;
+  // console.log(filters);
+
+  // let characteristicUuid = 'battery_level';//document.querySelector('#characteristic').value;
+  // let characteristicUuid = '0x00002a19';
+  let characteristicUuid = '0x00002221';  
+  // let characteristicUuid = '00002a19-0000-1000-8000-00805f9b34fb';
+  if (characteristicUuid.startsWith('0x')) {
+    characteristicUuid = parseInt(characteristicUuid);
+  }
+
+  console.log('Requesting Bluetooth Device...');
+  navigator.bluetooth.requestDevice(options)
+  .then(device => {
+    console.log('Connecting to GATT Server...');
+    return device.gatt.connect();
+  })
+  .then(server => {
+    console.log('Getting Service...');
+    return server.getPrimaryService(serviceUuid);
+  })
+  .then(service => {
+    console.log('Getting Characteristic...');
+    return service.getCharacteristic(characteristicUuid);
+  })
+  .then(characteristic => {
+    myCharacteristic = characteristic;
+    return myCharacteristic.startNotifications().then(_ => {
+      console.log('> Notifications started');
+      myCharacteristic.addEventListener('characteristicvaluechanged',
+          handleNotifications);
+    });
+  })
+  .catch(error => {
+    console.log('Argh! ' + error);
+  });
+}
+
+function onStopButtonClick() {
+  if (myCharacteristic) {
+    myCharacteristic.stopNotifications()
+    .then(_ => {
+      console.log('> Notifications stopped');
+      myCharacteristic.removeEventListener('characteristicvaluechanged',
+          handleNotifications);
+    })
+    .catch(error => {
+      console.log('Argh! ' + error);
+    });
+  }
+}
+
+function handleNotifications(event) {
+  let value = event.target.value;
+  let a = [];
+  for (let i = 0; i < value.byteLength; i++) {
+    a.push(String.fromCharCode(value.getUint8(i)));
+  }
+  let aInt = parseInt(a.join(''));
+  console.log(aInt);
+  document.querySelector('#BLEvalue').innerHTML=aInt;
+}
+
+
+
+function isWebBluetoothEnabled() {
+    if (navigator.bluetooth) {
+      return true;
+    } else {
+      ChromeSamples.setStatus('Web Bluetooth API is not available.\n' +
+          'Please make sure the "Experimental Web Platform features" flag is enabled.');
+      return false;
+    }
+  }   
+</script>
+</html>
