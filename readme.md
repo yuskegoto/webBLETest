@@ -4,6 +4,7 @@ PCやMacのChromeブラウザやAndroidのChromeからはBluetoothにアクセ�
 グラフはD3.jsで描きました。初D3で全部HTMLにJS平打ちなので見にくいのは勘弁してください。
 
 When you develop IoT devices, there are some occations you need to fetch data from the device for debugging or demo for your client. For the device side we got many options like nRF52 series (the controller on the BLE Nano V2). However for the receiver side you often need to write up your own debug app or using BLE exisiting debug app like LightBlue. Writing own app is pain, and using debug app is not always neat way to present to someone like your boss. So I wrote demo project for WebBluetooth, which is implemented in PC/Mac's Chrome as well as Android's Chrome. Android's standard browser also support this feature. When you use WebBluetooth, you only need to write bit of JS and HTML and it runs already on your PC and Android's browser!
+
 For the supoort status of Web Bluetooth on different platforms
 https://caniuse.com/#search=web%20bluetooth
 Chart was drawn by D3.js. It was my first time using D3.js. Sorry for very unreadable cord.
