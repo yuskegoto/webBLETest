@@ -1,28 +1,119 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" charset="UTF-8">
-<link rel="icon" type="image/x-icon" href="http://yuskegoto.net/images/myicon.ico" />
-<title>Web BLE Test</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" charset="UTF-8">
+	<script src="https://d3js.org/d3.v5.min.js"></script>
+	<style type="text/css">
+	.line {
+		fill: none;
+		stroke: #6af3c5;
+		stroke-width: 3;
+	}
+	</style>
+	<link rel="icon" type="image/x-icon" href="https://www.1-10.com/favicon.ico" />
+	<title>Web BLE Test</title>
 </head>
-<body id="background" style="background-color: rgb(230, 230, 230)">
-    <div id="info" style="color:rgb(10, 10 ,10); text-align: center; position: absolute; top:50%; left:50%; transform: translate(-50%, -50%)">
+<body id="background" style="background-color: rgb(250, 250, 250)">
+	<div id = "svgArea"></div>
+    <div id="info" style="color:rgb(10, 10 ,10); text-align: center; position: relative; ">
         <h2>
           Web BLE Demo<br><br>
         <span id = "BLEvalue"></span><br>
-        <button id = "connectBLE" type="button">Connect BLE</button><br>
+        <button id = "connectBLE" type="button">Connect BLE Device</button><br>
         <button id = "disconnect" type="button">Disconnect</button>
         </h2>
     </div>
 </body>
-<!-- <script>
-    if('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('service-worker.js');
-    }
-</script> -->
+
+<!-- Reference cord -->
+<!-- http://bl.ocks.org/d3noob/7030f35b72de721622b8 -->
+<script>
+var margin = {top: 50, right: 50, bottom: 50, left: 50}
+    , width = window.innerWidth - margin.left - margin.right // Use the window's width 
+    , height = window.innerHeight/2 - margin.top - margin.bottom; // Use the window's height
+
+// The number of datapoints
+var data = [];
+var n = 0;
+
+// 5. X scale will use the index of our data
+var xScale = d3.scaleLinear()
+    .domain([0, n]) // input
+    .range([0, width]); // output
+
+// 6. Y scale will use the randomly generate number 
+var yScale = d3.scaleLinear()
+    .domain([0, 0]) // input 
+    .range([height, 0]); // output 
+
+// 7. d3's line generator
+var line = d3.line()
+    .x(function(d, i) { return xScale(i); }) // set the x values for the line generator
+    .y(function(d) { return yScale(d.y); }) // set the y values for the line generator 
+    .curve(d3.curveMonotoneX) // apply smoothing to the line
+
+// 8. An array of objects of length N. Each object has key -> value pair, the key being "y" and the value is a random number
+var dataset = d3.range(n).map(function(d) { return {"y": data[d] } })
+// var dataset = data;
+// console.log(dataset);
+
+// 1. Add the SVG to the page and employ #2
+// var svg = d3.select("body").append("svg")
+var svg = d3.select("#svgArea").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+// 3. Call the x axis in a group tag
+svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(xScale)); // Create an axis component with d3.axisBottom
+
+// 4. Call the y axis in a group tag
+svg.append("g")
+    .attr("class", "y axis")
+    .call(d3.axisLeft(yScale)); // Create an axis component with d3.axisLeft
+
+// 9. Append the path, bind the data, and call the line generator 
+svg.append("path")
+    // .datum(dataset) // 10. Binds data to the line 
+    .attr("class", "line") // Assign a class for styling s
+    // .attr("d", line); // 11. Calls the line generator 
+    .attr("d", line(dataset)); // 11. Calls the line generator
+
+function updateGraph(num){
+    // let num = Math.random() * 5;
+    data.push(num);
+    n = data.length;
+    dataset = d3.range(n).map(function(d) { return {"y": data[d] } })
+
+    // set x axis domain
+    xScale = d3.scaleLinear()
+        .domain([0, n]) // input
+        .range([0, width]); // output
+    yScale = d3.scaleLinear()
+        .domain([Math.min.apply(null, data), Math.max.apply(null, data)]) // input 
+        .range([height, 0]); // output 
+
+    svg = d3.select("body").transition();
+    svg.select(".line")
+        .attr("d", line(dataset)); // 11. Calls the line generator 
+    svg.select(".x.axis") // change the x axis
+        .call(d3.axisBottom(xScale)); // Create an axis component with d3.axisBottom
+    svg.select(".y.axis") // change the y axis
+        .call(d3.axisLeft(yScale)); // Create an axis component with d3.axisLeft
+}
+</script>
+
+<!-- Below is the Ble function -->
+<!-- The code is heavily copied from chrome's web bluetooth documentation page 
+  https://developers.google.com/web/updates/2015/07/interact-with-ble-devices-on-the-web
+  https://googlechrome.github.io/samples/web-bluetooth/notifications.html -->
 <script>
 
-document.querySelector('#connectBLE').addEventListener('click', function() {
+  document.querySelector('#connectBLE').addEventListener('click', function() {
     if (isWebBluetoothEnabled()) {
       onStartButtonClick();
     }
@@ -36,91 +127,90 @@ document.querySelector('#connectBLE').addEventListener('click', function() {
  
   var myCharacteristic;
 
-function onStartButtonClick() {
+  function onStartButtonClick() {
+    /* specify service UUID, it can be an aliaa like 'battery_service', or 16 bytes / 32 bytes UUID*/
+    // let serviceUuid = 'battery_service';//document.querySelector('#service').value;
+    // let serviceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
+    // let serviceUuid = '0x0000180f';
+    let serviceUuid = '0x00002220';   // Unique service UUID
+    if (serviceUuid.startsWith('0x')) {
+      serviceUuid = parseInt(serviceUuid);
+    }
+    let filters = [];
+    // Often you do need to specify name, otherwise the BLE device won't be discovered
+    filters.push({name: 'BLE_DEV'});
+    filters.push({services: [serviceUuid]});
+    // filters.push({name: 'Palm'});
+    // filters.push({services: ["battery_service"]});
+    let options = [];
+    options.filters = filters;
+    /* specify optional service, not mandatory */
+    // let optionalServices = [];
+    // optionalServices.push('battery_service');
+    // optionalServices.push(serviceUuid);
+    // options.optionalServices = optionalServices;
+    // console.log(filters);
 
-  // let serviceUuid = '0xC0252F8FABADE4B2292141443D299243';
-  // let serviceUuid = '0xC0252F8F';
-  // let serviceUuid = 'c0252f8f-abad-e4b2-2921-41443d299243';
-  // let serviceUuid = 'battery_service';//document.querySelector('#service').value;
-  // let serviceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
-  // let serviceUuid = '0x0000180f';
-  let serviceUuid = '0x00002220';
-  if (serviceUuid.startsWith('0x')) {
-    serviceUuid = parseInt(serviceUuid);
-  }
+    // let characteristicUuid = 'battery_level';//document.querySelector('#characteristic').value;
+    // let characteristicUuid = '00002a19-0000-1000-8000-00805f9b34fb';
+    // let characteristicUuid = '0x00002a19';
+    let characteristicUuid = '0x00002221';  
+    if (characteristicUuid.startsWith('0x')) {
+      characteristicUuid = parseInt(characteristicUuid);
+    }
 
-  let filters = [];
-  filters.push({name: 'LION_WAIST'});
-  filters.push({services: [serviceUuid]});
-  // filters.push({name: 'Palm'});
-  // filters.push({services: ["battery_service"]});
-  let options = [];
-  options.filters = filters;
-  let optionalServices = [];
-  // optionalServices.push('battery_service');
-  optionalServices.push(serviceUuid);
-  options.optionalServices = optionalServices;
-  // console.log(filters);
-
-  // let characteristicUuid = 'battery_level';//document.querySelector('#characteristic').value;
-  // let characteristicUuid = '0x00002a19';
-  let characteristicUuid = '0x00002221';  
-  // let characteristicUuid = '00002a19-0000-1000-8000-00805f9b34fb';
-  if (characteristicUuid.startsWith('0x')) {
-    characteristicUuid = parseInt(characteristicUuid);
-  }
-
-  console.log('Requesting Bluetooth Device...');
-  navigator.bluetooth.requestDevice(options)
-  .then(device => {
-    console.log('Connecting to GATT Server...');
-    return device.gatt.connect();
-  })
-  .then(server => {
-    console.log('Getting Service...');
-    return server.getPrimaryService(serviceUuid);
-  })
-  .then(service => {
-    console.log('Getting Characteristic...');
-    return service.getCharacteristic(characteristicUuid);
-  })
-  .then(characteristic => {
-    myCharacteristic = characteristic;
-    return myCharacteristic.startNotifications().then(_ => {
-      console.log('> Notifications started');
-      myCharacteristic.addEventListener('characteristicvaluechanged',
-          handleNotifications);
-    });
-  })
-  .catch(error => {
-    console.log('Argh! ' + error);
-  });
-}
-
-function onStopButtonClick() {
-  if (myCharacteristic) {
-    myCharacteristic.stopNotifications()
-    .then(_ => {
-      console.log('> Notifications stopped');
-      myCharacteristic.removeEventListener('characteristicvaluechanged',
-          handleNotifications);
+    console.log('Requesting Bluetooth Device...');
+    navigator.bluetooth.requestDevice(options)
+    .then(device => {
+      console.log('Connecting to GATT Server...');
+      return device.gatt.connect();
+    })
+    .then(server => {
+      console.log('Getting Service...');
+      return server.getPrimaryService(serviceUuid);
+    })
+    .then(service => {
+      console.log('Getting Characteristic...');
+      return service.getCharacteristic(characteristicUuid);
+    })
+    .then(characteristic => {
+      myCharacteristic = characteristic;
+      return myCharacteristic.startNotifications().then(_ => {
+        console.log('> Notifications started');
+        myCharacteristic.addEventListener('characteristicvaluechanged',
+            handleNotifications);
+      });
     })
     .catch(error => {
       console.log('Argh! ' + error);
     });
   }
-}
 
-function handleNotifications(event) {
-  let value = event.target.value;
-  let a = [];
-  for (let i = 0; i < value.byteLength; i++) {
-    a.push(String.fromCharCode(value.getUint8(i)));
+  function onStopButtonClick() {
+    if (myCharacteristic) {
+      myCharacteristic.stopNotifications()
+      .then(_ => {
+        console.log('> Notifications stopped');
+        myCharacteristic.removeEventListener('characteristicvaluechanged',
+            handleNotifications);
+      })
+      .catch(error => {
+        console.log('Argh! ' + error);
+      });
+    }
   }
-  let aInt = parseInt(a.join(''));
-  console.log(aInt);
-  document.querySelector('#BLEvalue').innerHTML=aInt;
-}
+
+  function handleNotifications(event) {
+    let value = event.target.value;
+    let valueStr = [];
+    for (let i = 0; i < value.byteLength; i++) {
+      valueStr.push(String.fromCharCode(value.getUint8(i)));
+    }
+    let valueInt = parseInt(valueStr.join(''));
+    document.querySelector('#BLEvalue').innerHTML=valueInt;
+    console.log(valueInt);
+	updateGraph(valueInt);
+  }
 
 
 
@@ -132,6 +222,7 @@ function isWebBluetoothEnabled() {
           'Please make sure the "Experimental Web Platform features" flag is enabled.');
       return false;
     }
-  }   
+  }
+
 </script>
 </html>
