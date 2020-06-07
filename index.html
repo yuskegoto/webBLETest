@@ -138,7 +138,8 @@ function updateGraph(num){
     }
     let filters = [];
     // Often you do need to specify name, otherwise the BLE device won't be discovered
-    filters.push({name: 'BLE_DEV'});
+    filters.push({name: 'LION_WAIST_LOG'});
+    // filters.push({ name: 'BLE_DEV' });
     filters.push({services: [serviceUuid]});
     // filters.push({name: 'Palm'});
     // filters.push({services: ["battery_service"]});
